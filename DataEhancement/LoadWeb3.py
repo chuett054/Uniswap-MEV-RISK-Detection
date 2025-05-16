@@ -3,10 +3,13 @@ from web3 import Web3
 import time
 
 # load csv
-df = pd.read_csv("UniswapEvents.csv", low_memory = False)  # <-- replace with your filename
+df = pd.read_csv("UniswapEvents.csv", low_memory=False)
+
+# take only the first 20000 rows
+df_small = df.head(20000)
 
 # connect to infura
-w3 = Web3(Web3.HTTPProvider("https://mainnet.infura.io/v3/2121bc0855e54a909d6b54a1177c59bd"))
+w3 = Web3(Web3.HTTPProvider("https://mainnet.infura.io/v3/27afdbb0d6ac48a58c0ab3a850c504c7"))
 
 if not w3.is_connected():
     raise Exception("connection failed")
@@ -24,13 +27,16 @@ def fetch_gas_price(tx_hash):
 
 # fetch gas prices
 gas_prices = []
-for tx_hash in df['TX_HASH']:
+for idx, tx_hash in enumerate(df_small['TX_HASH']):
     gas_price = fetch_gas_price(tx_hash)
     gas_prices.append(gas_price)
-    time.sleep(0.05)  # slight pause to be safe
+    time.sleep(0.05)
 
-# add to dataframe
-df['GAS_PRICE_GWEI'] = gas_prices
+    if (idx + 1) % 500 == 0:   # Every 500 processed txs
+        print(f"Processed {idx + 1} transactions...")
 
-# save enriched csv
-df.to_csv("uniswap_swaps_enriched.csv", index=False)
+# assign the gas prices to new column
+df_small['GAS_PRICE_GWEI'] = gas_prices
+
+# save trimmed + enriched file
+df_small.to_csv("uniswap_swaps_20k_enriched.csv", index=False)
